@@ -11,9 +11,6 @@ app = FastAPI()
 # Get the directory where app.py is located
 app_dir = Path(__file__).parent
 
-# Serve static assets (logo.png, etc.) from the app directory
-app.mount("/static", StaticFiles(directory=str(app_dir)), name="static")
-
 @app.get("/")
 def root():
     # Return the existing index.html from the app directory
@@ -24,6 +21,9 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+# Serve all other files (logo.png, etc.) from the app directory
+app.mount("/", StaticFiles(directory=str(app_dir)), name="static")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8000"))
