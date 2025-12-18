@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -7,13 +8,17 @@ import uvicorn
 # ASGI application expected by Databricks Apps (Python type)
 app = FastAPI()
 
-# Serve static assets (logo.png, etc.) from the current folder
-app.mount("/static", StaticFiles(directory="."), name="static")
+# Get the directory where app.py is located
+app_dir = Path(__file__).parent
+
+# Serve static assets (logo.png, etc.) from the app directory
+app.mount("/static", StaticFiles(directory=str(app_dir)), name="static")
 
 @app.get("/")
 def root():
-    # Return the existing index.html
-    with open("index.html", "r", encoding="utf-8") as f:
+    # Return the existing index.html from the app directory
+    html_file = app_dir / "index.html"
+    with open(html_file, "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
 
 @app.get("/health")
