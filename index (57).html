@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Tool Stack</title>
+    <style>
+        /* --- RESET & GLOBAL FONTS --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Google Sans', 'Google Sans Text', 'Segoe UI', Helvetica, Arial, sans-serif;
+        }
+
+        body, html {
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column; 
+        }
+
+        /* --- VIDEO BACKGROUND --- */
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -2;
+            background: #002d56;
+        }
+        
+        .video-background iframe {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100vw;
+            height: 56.25vw; 
+            min-height: 100vh;
+            min-width: 177.77vh;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(0, 45, 86, 0.1) 0%, rgba(0, 45, 86, 0.4) 100%);
+            z-index: -1;
+        }
+
+        /* --- NAVIGATION --- */
+        nav {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 50px 60px; 
+            color: white;
+            flex-shrink: 0; 
+            z-index: 10;
+        }
+
+        body.interacting nav { display: none !important; }
+
+        .logo-img {
+            height: 130px !important; 
+            min-height: 130px !important;
+            width: auto !important;
+            display: block;
+        }
+
+        /* --- MAIN LAYOUT --- */
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; 
+            flex-grow: 1; 
+            color: white;
+            padding: 0 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        body.interacting .container {
+            flex-direction: row; 
+            align-items: flex-start; 
+            justify-content: flex-start;
+            max-width: 100%; 
+            padding-top: 20px;
+            gap: 20px;
+        }
+
+        h1 {
+            font-size: 3.8rem;
+            margin-bottom: 15px;
+            font-weight: 300;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        p.subtitle {
+            font-size: 1.6rem;
+            margin-bottom: 50px;
+            opacity: 0.95;
+            font-weight: 400;
+            max-width: 700px;
+            text-align: center;
+        }
+
+        body.interacting h1, body.interacting p.subtitle { display: none !important; }
+
+        /* --- THE 3 LENSES GRID --- */
+        .lenses-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 880px; 
+            margin-bottom: 80px; 
+            justify-content: center;
+        }
+
+        body.interacting .lenses-grid {
+            display: flex;
+            flex-direction: column;
+            width: fit-content;
+            margin-bottom: 0;
+            flex-shrink: 0;
+        }
+
+        .lens-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 12px 25px; 
+            height: 76px; 
+            border-radius: 8px; 
+            cursor: pointer;
+            text-align: center; 
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-width: 220px; 
+        }
+
+        .lens-card:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-3px);
+        }
+
+        .lens-card.active-lens {
+            background: rgba(255, 255, 255, 0.35);
+            border: 2px solid white;
+            box-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+
+        .lens-title { font-weight: 600; font-size: 1.3rem; display: block; }
+
+        /* --- CHAT INTERFACE --- */
+        .chat-container {
+            width: 92%; 
+            background: transparent; 
+            height: 150px; 
+            border-radius: 8px; 
+            overflow: visible; 
+            display: flex;
+            flex-direction: column;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative; 
+        }
+
+        body.interacting .chat-container { 
+            flex-grow: 1; 
+            height: 96vh; 
+            background: #ffffff; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden; 
+        }
+
+        .reset-btn {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: none;
+            z-index: 50;
+        }
+
+        body.interacting .reset-btn { display: block; }
+        .reset-btn svg { width: 24px; height: 24px; fill: #1F1F1F; opacity: 0.3; }
+
+        .chat-history {
+            flex-grow: 1;
+            padding: 60px 30px 180px 30px; 
+            overflow-y: auto;
+            display: none; 
+            background: white; 
+            scrollbar-width: thin;
+            scrollbar-color: rgba(10, 20, 45, 0.2) transparent;
+        }
+
+        body.interacting .chat-history { 
+            display: flex;
+            flex-direction: column; 
+        }
+
+        /* --- FLOATING PILL INPUT --- */
+        .chat-input-area {
+            position: absolute;
+            bottom: 0px; 
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 60px);
+            max-width: 900px;
+            display: flex;
+            flex-direction: column; 
+            padding: 24px 30px 15px 30px;
+            min-height: 150px; 
+            background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 32px; 
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15); 
+            z-index: 40;
+        }
+
+        body.interacting .chat-input-area {
+            bottom: 30px; 
+        }
+
+        textarea {
+            background: transparent;
+            border: none;
+            color: #1F1F1F; 
+            font-size: 20px; 
+            width: 100%;
+            height: auto;
+            min-height: 40px;
+            outline: none;
+            resize: none;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        textarea::placeholder { color: #8E918F; font-weight: 400; }
+
+        .input-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-top: auto;
+        }
+
+        .footer-left { display: flex; align-items: center; gap: 20px; }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #444746;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+        }
+
+        .send-btn-original {
+            background: #D7DDE8; 
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .send-btn-original:hover { background: #C8D1DE; }
+        
+        .send-btn-original svg { 
+            width: 26px; 
+            height: 26px; 
+            fill: #001C66; 
+            margin-left: 2px; 
+        } 
+
+        /* MESSAGE ALIGNMENT & TYPOGRAPHY */
+        .msg { 
+            margin-bottom: 30px; 
+            font-size: 20px; 
+            line-height: 1.6; 
+            color: #1F1F1F; 
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 900px; 
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .msg.you {
+            align-items: flex-end;
+            text-align: right;
+        }
+
+        .msg.you .msg-content {
+            background: #F0F4F9; 
+            padding: 12px 20px;
+            border-radius: 22px 0px 22px 22px; 
+            display: inline-block;
+            max-width: 85%;
+        }
+
+        .msg.artemis {
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .msg.artemis .msg-content {
+            max-width: 85%;
+        }
+
+        .msg-label { 
+            display: block; 
+            font-size: 14px; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            letter-spacing: 1.5px; 
+            margin-bottom: 8px; 
+            color: #444746; 
+        }
+
+        .msg.artemis .msg-label { 
+            color: #0079FF; 
+        }
+
+        .typing { 
+            font-style: italic; 
+            color: #0079FF; 
+            font-size: 20px; 
+            display: none; 
+            margin: 0 auto 20px auto; 
+            max-width: 900px; 
+            width: 100%;
+            text-align: left;
+        }
+
+    </style>
+</head>
+<body id="body">
+
+    <div class="video-background">
+        <iframe src="https://player.vimeo.com/video/1000239305?background=1&autoplay=1&loop=1&byline=0&title=0&muted=1" 
+                frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
+    </div>
+
+    <div class="overlay"></div>
+
+    <nav id="navBar">
+        <div class="nav-brand">
+            <img src="logo.png" alt="Brambles Logo" class="logo-img">
+        </div>
+    </nav>
+
+    <div class="container" id="mainContainer">
+        <h1>How do you want to work today?</h1>
+        <p class="subtitle">Find the right analytics tools, permissions and data.</p>
+
+        <div class="lenses-grid" id="lensesGrid">
+            <div class="lens-card" onclick="triggerChat('tool', this)">
+                <span class="lens-title">Find a tool or model</span>
+            </div>
+            <div class="lens-card" onclick="triggerChat('standards', this)">
+                <span class="lens-title">Learn ways of working</span>
+            </div>
+            <div class="lens-card" onclick="triggerChat('data', this)">
+                <span class="lens-title">Find data</span>
+            </div>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <button class="reset-btn" onclick="resetUI()" title="Restore landing page">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+
+            <div class="chat-history" id="chatHistory"></div>
+            <div id="typingIndicator" class="typing">Artemis is thinking...</div>
+            
+            <div class="chat-input-area">
+                <textarea id="chatInput" placeholder="What do you need? Ask Artemis" onkeypress="handleEnter(event)" oninput="autoExpand(this)"></textarea>
+                
+                <div class="input-footer">
+                    <div class="footer-left">
+                        <button class="icon-btn">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </button>
+                    </div>
+
+                    <div class="footer-right">
+                        <button class="send-btn-original" onclick="sendUserMessage()">
+                            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatHistory = document.getElementById('chatHistory');
+        const chatInput = document.getElementById('chatInput');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const body = document.getElementById('body');
+
+        function triggerChat(lens, element) {
+            body.classList.add('interacting');
+            chatHistory.innerHTML = '';
+            document.querySelectorAll('.lens-card').forEach(card => card.classList.remove('active-lens'));
+            element.classList.add('active-lens');
+            addMessage("I am Artemis. I am ready to help you find the right analytics tools.", 'Artemis');
+            chatInput.focus();
+        }
+
+        function resetUI() {
+            body.classList.remove('interacting');
+            document.querySelectorAll('.lens-card').forEach(card => card.classList.remove('active-lens'));
+            chatHistory.innerHTML = '';
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+        }
+
+        function autoExpand(el) {
+            el.style.height = 'auto';
+            el.style.height = (el.scrollHeight) + 'px';
+        }
+
+        function sendUserMessage() {
+            const text = chatInput.value.trim();
+            if(!text) return;
+            body.classList.add('interacting');
+            addMessage(text, 'You');
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            typingIndicator.style.display = 'block';
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            setTimeout(() => {
+                typingIndicator.style.display = 'none';
+                addMessage("I'm searching the tool catalog for you.", 'Artemis');
+            }, 1200);
+        }
+
+        function addMessage(text, sender) {
+            const div = document.createElement('div');
+            div.className = `msg ${sender.toLowerCase()}`;
+            div.innerHTML = `<span class="msg-label">${sender}</span><div class="msg-content">${text}</div>`; 
+            chatHistory.appendChild(div);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function handleEnter(e) {
+            if(e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); 
+                sendUserMessage();
+            }
+        }
+    </script>
+</body>
+</html>
